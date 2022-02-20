@@ -6,9 +6,12 @@
 
 
 // Global vars
-const baseURL = ("http://api.openweathermap.org/data/2.5/weather?zip="); 
-const apiKey = "&appid=cc9984e2da1ecc4ae3777c24cc1439bc";
-let userZip, userTemp, userFeeling;
+const baseURL   = ("http://api.openweathermap.org/data/2.5/weather?zip="); 
+const apiKey    = "&appid=cc9984e2da1ecc4ae3777c24cc1439bc";
+const date      = new Date();
+
+//  Open Global vars
+let userZip, userTemp, userTempF, userFeeling, userDate, userTime;
 
 //  Event listener for API call
 document.getElementById('generate').addEventListener('click', performAction);
@@ -16,42 +19,28 @@ document.getElementById('generate').addEventListener('click', performAction);
 //  Event listener callback function
 function performAction(event){
 
-    //  Get date for user reference
-    //  Retrieve date and time stamp on generate event
-    const date  = new Date();
-    const day   = date.getDate();
-    const month = date.getMonth()+1;
-    const year  = date.getFullYear();
-    const hour  = date.getHours();
-    const min   = date.getMinutes();
-    const minutes = doubleDigitMin(min);
-
-    // concat all date vars
-    const fullDate = (`${month}/${day}/${year}, time: ${hour}:${minutes}.`);
-    console.log(fullDate);
-
-    // re-assign uesrZip var 
+    // re-assign uesrZip, userFeeling
     userZip = document.getElementById('zip').value;
     userFeeling = document.getElementById('feelings').value;
-
-    // log to ensure zipcode is being captured
-    console.log(`The user entered zipcode: ${userZip}`);
-    console.log(`The user is feeling ${userFeeling}`);
 
     // call getWeatherData function with params
     getWeatherData(baseURL,userZip,apiKey)
     
     //  Chain promise (using .then() method, post data to the /addData route, add the objecct components)
     .then(function(data){
+
         console.log(data);
-        userTemp = data.main.temp;
-        //  User temp is returned from API as Kelvin, use function to convert to Farenheit
-        convertTemp(userTemp); 
 
-        //  Post temperature and userFeeling data to server
-        postData('/addData', {temp:temp, userFeeling:userFeeling});
+        userTemp    = data.main.temp;
+        userTempF   = convertTemp(userTemp);
+        userDate    = capturedDate();
+        userTime    = capturedTime();
+
+        //  Post temp, feeling, and date/time data to server
+        postData('/addData', {temp: userTempF, userFeeling: userFeeling, date: userDate, time: userTime});
     })
-
+    
+    //  Chain another promise to udpate UI AFTER posting the data to the server
     .then(function(){
         udpateUI();
     })
@@ -72,19 +61,15 @@ const getWeatherData = async(baseURL, userZip, apiKey) => {
 
     } catch (error){
 
-        console.log(`ERROR: ${error}.`)
+        console.log(`ERROR: ${error}`);
+
     }
 };
 
-const convertTemp = function(tempInK){
-    let tempInF = (tempInK - 273.15) * 9/5 + 32;
-    tempInF = Math.floor(tempInF);
-    console.log(`The current temperature is ${tempInF} degrees F`);
-};
 
 //  ASYNC post function to post data
 const postData = async(url = '', data = {}) => {
-    console.log(`Posting data: ${data}`);
+
     const res = await fetch(url, {
         method: 'POST',
         credentials: 'same-origin',
@@ -96,7 +81,6 @@ const postData = async(url = '', data = {}) => {
 
     try {
         const newData = await res.json();
-        console.log(newData)
         return newData;
     } catch(error){
         console.log(`There is an error in the post function: ${error}`)
@@ -107,25 +91,50 @@ const postData = async(url = '', data = {}) => {
 //  ASYNC function to update UI, using dynamically populated data
 const udpateUI = async() => {
     //  retrieve all data from endpoint
-    const req = await fetch('all');
+    const req = await fetch('/all');
 
     try{
-        const allData = await request.json();
-        console.log(`All requested data = ${allData}`);
+        const allData = await req.json();
         // Update individual DOM elements
-        document.getElementById('date').innerHTML = allData.date;
-        document.getElementById('temp').innerHTML = allData.temp;
-        document.getElementById('content').innerHTML = allData.userFeeling;
+        document.getElementById('date').innerHTML = `Date: ${allData.date}`;
+        document.getElementById('time').innerHTML = `Time: ${allData.time}`;
+        document.getElementById('temp').innerHTML = `Temperature: ${allData.temp} degree F`;
+        document.getElementById('content').innerHTML = `Content: ${allData.userFeeling}`;
+        console.log(allData);
+
     } catch(error) {
         console.log(`Error in requesting the data to update the UI: ${error}`)
     }
 };
 
-//  Date format function
-const doubleDigitMin = function(min){
-    if (min < 10){
-        return (`0${min}`);
-    } else {
-        return min;
-    }
+
+
+//  GLOBAL FUNCTIONS
+
+//  Convert KELVIN to FARENHIET
+const convertTemp = function(tempInK){
+    let tempInF = (tempInK - 273.15) * 9/5 + 32;
+    tempInF = Math.floor(tempInF);
+    return tempInF;
+};
+
+
+//  Date function
+const capturedDate = function(){
+    const date_date     = date.getDate();
+    const date_month    = date.getMonth() + 1;
+    const date_year     = date.getFullYear();
+    const date_capture  = (`${date_month}/${date_date}/${date_year}`);
+    console.log(date_capture);
+    return date_capture;
+};
+
+const capturedTime = function(){
+    const time_hour24   = date.getHours();
+    const time_minutes  = date.getMinutes();
+    const time_hourF    = (time_hour24 < 10) ? time_hour24 : time_hour24 - 12;
+    const time_minsF    = (time_minutes < 10) ? (`0${time_minutes}`):time_minutes;
+    const time_capture  = (`${time_hourF}:${time_minsF}`);
+    console.log(time_capture);
+    return time_capture;
 };
