@@ -7,11 +7,12 @@
 
 // Global vars
 const baseURL   = ("http://api.openweathermap.org/data/2.5/weather?zip="); 
-const apiKey    = "&appid=cc9984e2da1ecc4ae3777c24cc1439bc";
+const apiKey    = "&appid=cc9984e2da1ecc4ae3777c24cc1439bc" + "&units=imperial";
 const date      = new Date();
 
 //  Open Global vars
-let userZip, userTemp, userTempF, userFeeling, userDate, userTime;
+let userZip, userTemp, userFeeling, userDate, userTime;
+
 
 //  Event listener for API call
 document.getElementById('generate').addEventListener('click', performAction);
@@ -32,12 +33,11 @@ function performAction(event){
         console.log(data);
 
         userTemp    = data.main.temp;
-        userTempF   = convertTemp(userTemp);
         userDate    = capturedDate();
         userTime    = capturedTime();
 
         //  Post temp, feeling, and date/time data to server
-        postData('/addData', {temp: userTempF, userFeeling: userFeeling, date: userDate, time: userTime});
+        postData('/addData', {temp: userTemp, userFeeling: userFeeling, date: userDate, time: userTime});
     })
     
     //  Chain another promise to udpate UI AFTER posting the data to the server
@@ -98,7 +98,7 @@ const udpateUI = async() => {
         // Update individual DOM elements
         document.getElementById('date').innerHTML = `Date: ${allData.date}`;
         document.getElementById('time').innerHTML = `Time: ${allData.time}`;
-        document.getElementById('temp').innerHTML = `Temperature: ${allData.temp} degree F`;
+        document.getElementById('temp').innerHTML = `Temperature: ${allData.temp} degree (imperial)`;
         document.getElementById('content').innerHTML = `Content: ${allData.userFeeling}`;
         console.log(allData);
 
@@ -110,15 +110,6 @@ const udpateUI = async() => {
 
 
 //  GLOBAL FUNCTIONS
-
-//  Convert KELVIN to FARENHIET
-const convertTemp = function(tempInK){
-    let tempInF = (tempInK - 273.15) * 9/5 + 32;
-    tempInF = Math.floor(tempInF);
-    return tempInF;
-};
-
-
 //  Date function
 const capturedDate = function(){
     const date_date     = date.getDate();
@@ -138,3 +129,5 @@ const capturedTime = function(){
     console.log(time_capture);
     return time_capture;
 };
+
+
